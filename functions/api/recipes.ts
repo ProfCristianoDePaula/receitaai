@@ -50,18 +50,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const servings = Math.min(12, Math.max(1, Number(body.servings) || 2))
     const preferences = Array.isArray(body.preferences) ? body.preferences.map(String).slice(0, 8) : []
 
-    const system = `Você é um chef e nutricionista culinário especializado em cozinha doméstica brasileira. Crie exatamente três receitas diferentes, realistas e executáveis. Responda exclusivamente no JSON solicitado. Regras obrigatórias: (1) Não invente que o usuário possui ingredientes que não informou. (2) Em ingredients, available=true somente para itens que correspondam aos ingredientes informados; os demais devem ser false e aparecer também em extraIngredients. (3) Ingredientes básicos como água, sal, pimenta e óleo podem ser sugeridos como adicionais, nunca presumidos como disponíveis. (4) Separe ingredientes opcionais e identifique-os com optional=true. (5) Não faça alegações médicas ou nutricionais terapêuticas. (6) Respeite o tempo máximo e o tipo de refeição. (7) As três opções devem ser realmente distintas. (8) pantryMatch deve ser um inteiro de 0 a 100, calculado considerando os ingredientes disponíveis em relação aos ingredientes não opcionais. (9) Escreva em português brasileiro, com quantidades plausíveis e instruções claras. (10) imagePrompt deve ser uma descrição em inglês para fotografia gastronômica fotorrealista, prato pronto em louça elegante, iluminação natural, enquadramento editorial, sem texto, sem letras, sem marca d'água.`
+    const system = `Você é um chef e nutricionista culinário especializado em cozinha doméstica brasileira. Crie exatamente três receitas diferentes, realistas e executáveis. Responda exclusivamente no JSON solicitado. Regras obrigatórias: (1) Não invente que o usuário possui ingredientes que não informou. (2) Em ingredients, available=true somente para itens que correspondam aos ingredientes informados; os demais devem ser false e aparecer também em extraIngredients. (3) Ingredientes básicos como água, sal, pimenta e óleo podem ser sugeridos como adicionais, nunca presumidos como disponíveis. (4) Separe ingredientes opcionais e identifique-os com optional=true. (5) Não faça alegações médicas ou nutricionais terapêuticas. (6) Respeite o tempo máximo e o tipo de refeição. (7) As três opções devem ser realmente distintas. (8) pantryMatch deve ser um inteiro de 0 a 100, calculado considerando os ingredientes disponíveis em relação aos ingredientes não opcionais. (9) Escreva em português brasileiro, com descrição apetitosa de 1 a 2 frases específica para o prato, com quantidades plausíveis e instruções claras. (10) imagePrompt deve ser uma descrição em inglês para fotografia gastronômica fotorrealista, prato pronto em louça elegante, iluminação natural, enquadramento editorial, sem texto, sem letras, sem marca d'água.`
     const user = `Ingredientes disponíveis: ${ingredients.join(', ')}. Tipo de refeição: ${mealType}. Tempo máximo: ${maxTime} minutos. Porções: ${servings}. Preferências: ${preferences.join(', ') || 'Nenhuma'}. Gere três receitas.`
 
-    const result = await env.AI.run(MODEL, {
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      max_tokens: 3600,
-      response_format: { type: 'json_schema', json_schema: recipeSchema }
-    }) as { response?: string; result?: { response?: string } }
-
-    const raw = result.response ?? result.result?.response
-    if (!raw) throw new Error('O modelo não retornou conteúdo estruturado.')
-    const parsed = JSON.parse(raw) as { recipes?: Record<string, unknown>[] }
+    let parsed: { recipes?: Record<string, unknown>[] } = {}
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const result = await env.AI.run(MODEL, {
+          messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+          max_tokens: 3600,
+          response_format: { type: 'json_schema', json_schema: recipeSchema }
+        }) as { response?: unknown; result?: { response?: unknown } }
+        const raw = result.response ?? result.result?.response
+        if (!raw) continue
+        parsed = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { recipes?: Record<string, unknown>[] }
+        if (Array.isArray(parsed.recipes) && parsed.recipes.length === 3) break
+      } catch (error) {
+        if (attempt === 1) throw error
+      }
+    }
     if (!Array.isArray(parsed.recipes) || parsed.recipes.length !== 3) throw new Error('A IA não retornou exatamente três receitas. Tente novamente.')
 
     const recipes = parsed.recipes.map((recipe, index) => ({

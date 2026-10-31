@@ -117,7 +117,7 @@ function App() {
         </section>}
 
         {!recipes.length && !loadingRecipes && <section className="how-section" id="como-funciona"><div className="how-heading"><span className="step-label">SIMPLES ASSIM</span><h2>Da geladeira para a mesa.</h2></div><div className="how-grid"><div className="how-card"><span className="how-number">01</span><span className="how-icon"><CookingPot size={22}/></span><h3>Você conta</h3><p>Liste os ingredientes esquecidos na geladeira ou na despensa.</p></div><div className="how-card"><span className="how-number">02</span><span className="how-icon"><Sparkles size={22}/></span><h3>A IA cria</h3><p>Nosso chef virtual combina os ingredientes em três receitas possíveis.</p></div><div className="how-card"><span className="how-number">03</span><span className="how-icon"><Utensils size={22}/></span><h3>Você prepara</h3><p>Escolha seu prato, confira o passo a passo e bom apetite!</p></div></div></section>}
-        {favoriteRecipes.length > 0 && <section className="favorites-strip"><Bookmark size={17}/><span>{favorites.length} receita(s) salva(s) neste navegador.</span></section>}
+        {favorites.length > 0 && <section className="favorites-strip"><Bookmark size={17}/><span>{favorites.length} receita(s) salva(s) neste navegador.</span></section>}
       </main>
       <footer><a className="brand footer-brand" href="#top"><span className="brand-mark"><ChefHat size={18}/></span><span>receita<span className="brand-ai">AI</span></span></a><span>Feito com carinho e uma pitada de inteligência artificial.</span><span>© {new Date().getFullYear()} ReceitaAI</span></footer>
 
